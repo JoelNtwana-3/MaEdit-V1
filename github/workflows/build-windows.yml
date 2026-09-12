@@ -1,0 +1,18 @@
+name: Build MaEdit V1 for Windows
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run build
+      run: |
+        # Add your build commands here
