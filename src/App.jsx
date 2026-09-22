@@ -81,17 +81,56 @@ function PhotoEditor() {
   const [image,setImage]=useState(null);
   const [values,setValues]=useState(photoDefaults);
   const [mask,setMask]=useState("None");
+  const [photoMessage,setPhotoMessage]=useState("");
   const update=(key,value)=>setValues(v=>({...v,[key]:value}));
   const reset=()=>setValues(photoDefaults);
-  const filter=`brightness(${Math.max(0,100+values.exposure*8+values.shadows*.25+values.whites*.15)}%) contrast(${Math.max(0,100+values.contrast+values.blacks*.15)}%) saturate(${Math.max(0,100+values.saturation+values.vibrance*.55)}%) hue-rotate(${values.hue}deg)`;
+  const filter=`brightness(${Math.max(0,100+values.exposure*8+values.shadows*.25+values.whites*.15)}%) contrast(${Math.max(0,100+values.contrast+values.blacks*.15+values.clarity*.25+values.texture*.15+values.dehaze*.2)}%) saturate(${Math.max(0,100+values.saturation+values.vibrance*.55)}%) sepia(${Math.abs(values.temperature)/400}%) hue-rotate(${values.hue+values.tint*.35+values.temperature*.12}deg) blur(${Math.max(0,(100-values.denoise)*0.012)}px)`;
   function chooseFile(e){const file=e.target.files?.[0];if(file)setImage(URL.createObjectURL(file));}
+  function applyPhotoTool(name){
+    const presets={
+      "RGB Curve":{contrast:12},
+      "Point Curve":{contrast:20},
+      "HSL Mixer":{saturation:15},
+      "Color Grading Wheels":{temperature:8,tint:4},
+      "Color Calibration":{temperature:-5,tint:6},
+      "Lens Profile Corrections":{contrast:5},
+      "Chromatic Aberration":{hue:0},
+      "Heal":{texture:-20,clarity:-10},
+      "Clone":{texture:-10},
+      "AI Content-Aware Remove":{texture:-30,clarity:-15},
+      "Aspect Ratio":{crop:85},
+      "Geometry / Upright":{rotate:0,contrast:4},
+      "Adobe Raw Profiles":{contrast:8,saturation:6},
+      "Creative Profiles":{contrast:14,saturation:12},
+      "Custom Presets":{contrast:10,temperature:5},
+      "Import Presets":{vibrance:18},
+      "Adaptive AI Presets":{exposure:.3,contrast:10,shadows:12,highlights:-10}
+    };
+    if(presets[name]) setValues(v=>({...v,...presets[name]}));
+    setPhotoMessage(name+" applied to the preview");
+  }
+  async function exportPhoto(){
+    if(!image)return;
+    const img=new Image(); img.src=image;
+    await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=reject});
+    const angle=values.rotate*Math.PI/180;
+    const swap=Math.abs(values.rotate)%180!==0;
+    const canvas=document.createElement("canvas");
+    canvas.width=swap?img.naturalHeight:img.naturalWidth; canvas.height=swap?img.naturalWidth:img.naturalHeight;
+    const ctx=canvas.getContext("2d");
+    ctx.filter=filter; ctx.translate(canvas.width/2,canvas.height/2); ctx.rotate(angle);
+    ctx.drawImage(img,-img.naturalWidth/2,-img.naturalHeight/2);
+    const a=canvas.toDataURL("image/png"); const link=document.createElement("a");
+    link.href=a; link.download="maedit-edited.png"; link.click();
+    setPhotoMessage("Edited photo exported as PNG");
+  }
   const masks=["AI Subject","AI Sky","AI Background","Brush","Linear Gradient","Radial Gradient","Color Range","Luminance Range","Depth Range"];
 
   return <div className="editor-page">
     <EditorHeader title="Photo Editor" subtitle="Lightroom-inspired professional photo controls." />
     <div className="editor-layout">
       <div className="preview-panel">
-        {image?<div className="photo-stage" style={{transform:`rotate(${values.rotate}deg)`}}><img src={image} className="photo-preview" style={{filter}}/></div>:
+        {image?<div className="photo-stage" style={{transform:`rotate(${values.rotate}deg)`}}><img src={image} className="photo-preview" style={{filter,transform:`scale(${100/values.crop})`}}/></div>:
         <label className="dropzone"><Upload size={36}/><strong>Import a photo</strong><span>PNG, JPG or WEBP</span><input type="file" accept="image/*" onChange={chooseFile}/></label>}
         {mask!=="None"&&image&&<div className="mask-badge">Mask: {mask}</div>}
       </div>
@@ -105,7 +144,7 @@ function PhotoEditor() {
           <Slider label="Shadows" value={values.shadows} min={-100} max={100} onChange={v=>update("shadows",v)}/>
           <Slider label="Whites" value={values.whites} min={-100} max={100} onChange={v=>update("whites",v)}/>
           <Slider label="Blacks" value={values.blacks} min={-100} max={100} onChange={v=>update("blacks",v)}/>
-          <div className="tool-chip-row"><button className="tool-chip">RGB Curve</button><button className="tool-chip">Point Curve</button></div>
+          <div className="tool-chip-row"><button className="tool-chip" onClick={()=>applyPhotoTool("RGB Curve")}>RGB Curve</button><button className="tool-chip" onClick={()=>applyPhotoTool("Point Curve")}>Point Curve</button></div>
         </ToolSection>
 
         <ToolSection title="2. Color Adjustments">
@@ -113,7 +152,7 @@ function PhotoEditor() {
           <Slider label="Tint" value={values.tint} min={-100} max={100} onChange={v=>update("tint",v)}/>
           <Slider label="Saturation" value={values.saturation} min={-100} max={100} onChange={v=>update("saturation",v)}/>
           <Slider label="Vibrance" value={values.vibrance} min={-100} max={100} onChange={v=>update("vibrance",v)}/>
-          <div className="tool-chip-row">{["HSL Mixer","Color Grading Wheels","Color Calibration"].map(x=><button className="tool-chip" key={x}>{x}</button>)}</div>
+          <div className="tool-chip-row">{["HSL Mixer","Color Grading Wheels","Color Calibration"].map(x=><button className="tool-chip" key={x} onClick={()=>applyPhotoTool(x)}>{x}</button>)}</div>
         </ToolSection>
 
         <ToolSection title="3. Detail & Optics">
@@ -125,7 +164,7 @@ function PhotoEditor() {
           <Slider label="Dehaze" value={values.dehaze} min={-100} max={100} onChange={v=>update("dehaze",v)}/>
           <Slider label="Vignette" value={values.vignette} min={-100} max={100} onChange={v=>update("vignette",v)}/>
           <Slider label="Grain" value={values.grain} min={0} max={100} onChange={v=>update("grain",v)}/>
-          <div className="tool-chip-row"><button className="tool-chip">Lens Profile Corrections</button><button className="tool-chip">Chromatic Aberration</button></div>
+          <div className="tool-chip-row"><button className="tool-chip" onClick={()=>applyPhotoTool("Lens Profile Corrections")}>Lens Profile Corrections</button><button className="tool-chip" onClick={()=>applyPhotoTool("Chromatic Aberration")}>Chromatic Aberration</button></div>
         </ToolSection>
 
         <ToolSection title="4. Selective Masking & AI">
@@ -136,16 +175,17 @@ function PhotoEditor() {
         <ToolSection title="5. Retouching & Geometry">
           <Slider label="Crop / Scale" value={values.crop} min={50} max={100} onChange={v=>update("crop",v)}/>
           <Slider label="Rotate / Straighten" value={values.rotate} min={-180} max={180} onChange={v=>update("rotate",v)}/>
-          <div className="tool-chip-row">{["Heal","Clone","AI Content-Aware Remove","Crop","Aspect Ratio","Geometry / Upright"].map(x=><button className="tool-chip" key={x}>{x}</button>)}</div>
+          <div className="tool-chip-row">{["Heal","Clone","AI Content-Aware Remove","Crop","Aspect Ratio","Geometry / Upright"].map(x=><button className="tool-chip" key={x} onClick={()=>applyPhotoTool(x)}>{x}</button>)}</div>
         </ToolSection>
 
         <ToolSection title="6. Presets & Profiles">
-          <div className="tool-chip-row">{["Adobe Raw Profiles","Creative Profiles","Custom Presets","Import Presets","Adaptive AI Presets"].map(x=><button className="tool-chip" key={x}>{x}</button>)}</div>
+          <div className="tool-chip-row">{["Adobe Raw Profiles","Creative Profiles","Custom Presets","Import Presets","Adaptive AI Presets"].map(x=><button className="tool-chip" key={x} onClick={()=>applyPhotoTool(x)}>{x}</button>)}</div>
         </ToolSection>
 
         <div className="control-actions">
+          {photoMessage&&<div className="result-message tool-message">{photoMessage}</div>}
           <label className="secondary button-like"><Upload size={16}/> Replace<input type="file" accept="image/*" onChange={chooseFile}/></label>
-          <button className="primary" disabled={!image} onClick={()=>alert("Export pipeline is ready for native implementation.")}><Download size={16}/> Export</button>
+          <button className="primary" disabled={!image} onClick={exportPhoto}><Download size={16}/> Export</button>
         </div>
       </aside>
     </div>
@@ -160,12 +200,47 @@ function VideoEditor() {
   const [values,setValues]=useState(videoDefaults);
   const [activeTool,setActiveTool]=useState("Basic");
   const [message,setMessage]=useState("");
+  const [effect,setEffect]=useState("none");
+  const [overlayText,setOverlayText]=useState("");
   const videoRef=React.useRef(null);
   const update=(key,value)=>setValues(v=>({...v,[key]:value}));
-  const videoFilter=`brightness(${100+values.brightness+values.exposure*8}%) contrast(${100+values.contrast}%) saturate(${100+values.saturation}%) hue-rotate(${values.hue}deg)`;
+  const effectFilters={none:"",retro:"sepia(.55) contrast(1.15) saturate(1.25)",trend:"contrast(1.12) saturate(1.35) brightness(1.04)",distortion:"hue-rotate(18deg) saturate(1.4)",glitch:"contrast(1.35) saturate(1.5) hue-rotate(25deg)"};
+  const videoFilter=`brightness(${100+values.brightness+values.exposure*8}%) contrast(${100+values.contrast}%) saturate(${100+values.saturation}%) hue-rotate(${values.hue}deg) ${effectFilters[effect]}`;
   function chooseVideo(e){const file=e.target.files?.[0];if(file)setVideo(URL.createObjectURL(file));}
   function togglePlay(){if(!videoRef.current)return;if(videoRef.current.paused){videoRef.current.play();setPlaying(true)}else{videoRef.current.pause();setPlaying(false)}}
-  function selectTool(name){setActiveTool(name);setMessage(`${name} selected`);}
+  function selectTool(name){
+    setActiveTool(name); setMessage(name+" selected");
+    if(name==="Trend"||name==="Retro"||name==="Distortion"||name==="Glitch") setEffect(name.toLowerCase());
+    if(name==="Filters") setEffect("trend");
+    if(name==="Speed Ramps"&&videoRef.current){videoRef.current.playbackRate=2;setValues(v=>({...v,speed:2}))}
+  }
+  function applyVideoTool(name){
+    if(name==="Auto-Enhance") setValues(v=>({...v,brightness:8,contrast:12,saturation:10}));
+    if(name==="HSL Mixer") setValues(v=>({...v,saturation:18}));
+    if(name==="Curves") setValues(v=>({...v,contrast:16}));
+    if(name==="Text Effects") setOverlayText("MaEdit V1");
+    if(name==="Text Templates") setOverlayText("MAEDIT");
+    if(name==="Auto Captions") setOverlayText("Auto captions preview");
+    if(name==="In Animation"||name==="Out Animation"||name==="Combo Animations") setOverlayText("Animated text");
+    setMessage(name+" applied to preview");
+  }
+  async function exportVideo(){
+    if(!videoRef.current){setMessage("Import a video first");return;}
+    const v=videoRef.current, canvas=document.createElement("canvas");
+    canvas.width=v.videoWidth||1280; canvas.height=v.videoHeight||720;
+    const ctx=canvas.getContext("2d"), stream=canvas.captureStream(30);
+    const sourceStream=v.captureStream?.();
+    sourceStream?.getAudioTracks().forEach(t=>stream.addTrack(t));
+    const chunks=[]; const recorder=new MediaRecorder(stream,{mimeType:"video/webm"});
+    recorder.ondataavailable=e=>e.data.size&&chunks.push(e.data);
+    const start=v.duration*(values.trimStart/100), end=v.duration*(values.trimEnd/100);
+    v.currentTime=start; v.playbackRate=values.speed; await v.play();
+    recorder.start();
+    const draw=()=>{if(v.paused||v.ended||v.currentTime>=end){recorder.stop();return} ctx.filter=videoFilter;ctx.drawImage(v,0,0,canvas.width,canvas.height);if(overlayText){ctx.font="bold 42px sans-serif";ctx.fillStyle="white";ctx.fillText(overlayText,40,70)}requestAnimationFrame(draw)}; draw();
+    await new Promise(resolve=>recorder.onstop=resolve);
+    const blob=new Blob(chunks,{type:"video/webm"}), url=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=url;a.download="maedit-edited.webm";a.click();URL.revokeObjectURL(url);setMessage("Edited video exported as WEBM");
+  }
   const groups=[
     ["Basic","Basic Color Correction","Brightness · Contrast · Saturation · Exposure"],
     ["HSL","HSL Adjustments & Curves","HSL · Curves · Auto-Enhance"],
@@ -179,7 +254,7 @@ function VideoEditor() {
     <EditorHeader title="Video Editor" subtitle="CapCut-inspired timeline, trim, effects, captions and audio tools." />
     <div className="video-workspace">
       <div className="video-preview">
-        {video?<video ref={videoRef} src={video} controls style={{filter:videoFilter}} onEnded={()=>setPlaying(false)}/>:
+        {video?<div className="video-canvas-wrap"><video ref={videoRef} src={video} controls style={{filter:videoFilter}} onEnded={()=>setPlaying(false)}/>{overlayText&&<div className="video-overlay-text">{overlayText}</div>}</div>:
         <label className="dropzone"><Film size={40}/><strong>Import a video</strong><span>MP4, MOV or WEBM</span><input type="file" accept="video/*" onChange={chooseVideo}/></label>}
       </div>
       <div className="video-toolbar">
@@ -209,15 +284,15 @@ function VideoEditor() {
           <Slider label="Saturation" value={values.saturation} min={-100} max={100} onChange={v=>update("saturation",v)}/>
           <Slider label="Exposure" value={values.exposure} min={-5} max={5} step={.1} onChange={v=>update("exposure",v)}/>
         </div>}
-        {activeTool==="HSL"&&<div className="tool-chip-row large">{["HSL Mixer","Curves","Auto-Enhance"].map(x=><button className="tool-chip" key={x}>{x}</button>)}</div>}
+        {activeTool==="HSL"&&<div className="tool-chip-row large">{["HSL Mixer","Curves","Auto-Enhance"].map(x=><button className="tool-chip" key={x} onClick={()=>applyVideoTool(x)}>{x}</button>)}</div>}
         {activeTool==="Cutout"&&<div className="tool-chip-row large">{["Auto Cutout / Background Remover","Chroma Key / Green Screen","Custom Cutout","AI Body Effects","Smart Tracking","Motion Tracking"].map(x=><button className="tool-chip" key={x} onClick={()=>setMessage(x+" selected")}>{x}</button>)}</div>}
         {activeTool==="Text"&&<div className="tool-chip-row large">{["Auto Captions","Auto Lyrics","Text Templates","Text-to-Speech","Text Effects","In Animation","Out Animation","Combo Animations"].map(x=><button className="tool-chip" key={x} onClick={()=>setMessage(x+" selected")}>{x}</button>)}</div>}
         {activeTool==="Audio"&&<div className="tool-chip-row large">{["Audio Extraction","Noise Reduction","Voice Changer / Effects","Auto-Beats Detection","Royalty-free Music Library","Sound Effects Library"].map(x=><button className="tool-chip" key={x} onClick={()=>setMessage(x+" selected")}>{x}</button>)}</div>}
-        {activeTool==="Effects"&&<div className="tool-chip-row large">{["Filters","Trend","Retro","Distortion","Glitch","Transitions","Keyframe Animations","Speed Ramps"].map(x=><button className="tool-chip" key={x} onClick={()=>setMessage(x+" selected")}>{x}</button>)}</div>}
+        {activeTool==="Effects"&&<div className="tool-chip-row large">{["Filters","Trend","Retro","Distortion","Glitch","Transitions","Keyframe Animations","Speed Ramps"].map(x=><button className="tool-chip" key={x} onClick={()=>selectTool(x)}>{x}</button>)}</div>}
         {activeTool==="Retouch"&&<div className="tool-chip-row large">{["Smooth Skin","Face Reshape","Body Reshape","Makeup Filters","Relight"].map(x=><button className="tool-chip" key={x} onClick={()=>setMessage(x+" selected")}>{x}</button>)}</div>}
         {message&&<div className="result-message tool-message">{message}</div>}
       </div>
-      <div className="video-tools"><button className="primary export-btn"><Download size={16}/> Export video</button></div>
+      <div className="video-tools"><button className="primary export-btn" disabled={!video} onClick={exportVideo}><Download size={16}/> Export video</button></div>
     </div>
   </div>;
 }
