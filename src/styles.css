@@ -25,3 +25,37 @@ h2{font-size:22px;margin:44px 0 18px}.feature-grid{display:grid;grid-template-co
 .empty-projects{border:1px dashed #334155;border-radius:18px;min-height:360px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#64748b;text-align:center}.empty-projects h3{color:#cbd5e1;margin:20px 0 8px}.empty-projects p{font-size:13px}
 @media(max-width:1000px){.feature-grid{grid-template-columns:repeat(2,1fr)}.hero-art{display:none}.editor-layout,.ai-layout{grid-template-columns:1fr}.controls-panel{order:-1}.preview-panel{min-height:400px}}
 @media(max-width:700px){.sidebar{position:fixed;left:-250px;top:68px;bottom:0;z-index:15;transition:left .2s}.sidebar.open{left:0}.mobile-menu{display:block}.topbar{padding:0 14px}.page,.editor-page{padding:28px 18px}.hero{padding:28px;min-height:auto}.hero h1{font-size:36px}.feature-grid{grid-template-columns:1fr}.page-heading h1{font-size:27px}.control-actions{flex-direction:column}.export-btn{margin-left:0}}
+
+
+/* Advanced Lightroom / CapCut editing UI */
+.pro-editor-layout{align-items:start}
+.pro-controls{max-height:calc(100vh - 150px);overflow:auto}
+.panel-toolbar{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 12px}
+.tool-section{border-top:1px solid #263044}
+.tool-section-head{width:100%;border:0;background:transparent;color:#94a3b8;padding:13px 4px;display:flex;align-items:center;justify-content:space-between}
+.tool-section-head b{font-size:12px;color:#e2e8f0}
+.tool-section-body{padding:2px 4px 12px}
+.tool-chip-row{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
+.tool-chip{background:#202a3d;color:#cbd5e1;border:1px solid #344158;border-radius:8px;padding:8px 9px;font-size:10px}
+.tool-chip:hover{border-color:#8b5cf6;color:#ddd6fe}
+.tool-chip-row.large .tool-chip{font-size:11px;padding:10px 12px}
+.mask-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.mask-btn{background:#182235;color:#aeb9cc;border:1px solid #303c52;border-radius:8px;padding:9px 6px;font-size:10px}
+.mask-btn.active{background:#31245b;color:#ddd6fe;border-color:#8b5cf6}
+.mask-badge{position:absolute;left:18px;top:18px;background:#211a3a;border:1px solid #493a75;color:#c4b5fd;padding:7px 10px;border-radius:9px;font-size:11px}
+.photo-stage{max-width:100%;max-height:620px;display:grid;place-items:center}
+.advanced-timeline{margin-top:18px}
+.video-toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}
+.speed-select select{background:transparent;color:#cbd5e1;border:0;outline:0;font-size:12px}
+.video-tools-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:18px}
+.video-tool-card{border:1px solid #303c52;background:#151d2d;border-radius:12px;color:#aeb9cc;text-align:left;padding:13px;display:flex;flex-direction:column;gap:7px}
+.video-tool-card strong{color:#e2e8f0;font-size:12px}.video-tool-card span{font-size:10px;line-height:1.4}
+.video-tool-card.active{border-color:#8b5cf6;background:#211a3a}
+.video-tool-panel{margin-top:18px;padding:16px}
+.tool-control-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px}
+.tool-message{margin-top:14px;max-width:none}
+.pro-controls .range-row{margin-bottom:16px}
+.pro-controls .range-row span{font-size:11px}
+.pro-controls .control-actions{margin-top:16px}
+@media(max-width:1100px){.video-tools-grid{grid-template-columns:repeat(2,1fr)}.pro-controls{max-height:none}}
+@media(max-width:700px){.video-tools-grid,.tool-control-grid{grid-template-columns:1fr}}
